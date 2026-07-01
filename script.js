@@ -35,9 +35,9 @@ async function sendMessage() {
         const data = await response.json();
 
         // Check if the server returned an error (like a 429 rate limit)
+        // Check if the server returned an error code
         if (!response.ok) {
-            // --- UPDATED: Graceful, therapeutic handling if Gemini is rate-limited ---
-            if (data.detail && data.detail.includes("429")) {
+            if (response.status === 429) {
                 appendMessage("I'm pausing to gather my thoughts. Please wait a short moment before sending your next message! 🤍", 'assistant-message');
             } else {
                 appendMessage(`Error: ${data.detail || "Something went wrong on the server."}`, 'assistant-message');

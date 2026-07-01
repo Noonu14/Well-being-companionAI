@@ -86,30 +86,33 @@ SYSTEM_INSTRUCTION = (
     "- Keep responses deeply warm, grounded, and concise (under 4-5 sentences maximum) to keep text easily readable and digestible."
 )
 
+# Simplify the request schema to accept a list of dicts directly
+class ChatRequest(BaseModel):
+    message: str
+    history: list = []  # Changed from list[ChatMessage] to a standard list
+
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
     try:
-        # Check hardcoded crisis words first
         if contains_crisis_keywords(request.message):
             return {"response": CRISIS_RESPONSE, "crisis_triggered": True}
 
-        # Reconstruct history into the format the google-genai SDK expects
+        # Reconstruct history layout securely
         formatted_contents = []
         for turn in request.history:
-            role = "user" if turn.sender == "user" else "model"
-            # Use a clean dictionary approach for the SDK contents list structure
+            # Safely read from standard dictionary keys sent by JS
+            role = "user" if turn.get("sender") == "user" else "model"
             formatted_contents.append({
                 "role": role,
-                "parts": [turn.text]
+                "parts": [turn.get("text", "")]
             })
         
-        # Append the current active message to the context array
+        # Add current message context
         formatted_contents.append({
             "role": "user",
             "parts": [request.message]
         })
 
-        # Generate content with the clean list structure
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=formatted_contents,
@@ -122,9 +125,11 @@ async def chat_endpoint(request: ChatRequest):
         return {"response": response.text, "crisis_triggered": False}
 
     except Exception as e:
-        # If an error happens, print it directly to your Render terminal logs for easy debugging
-        print(f"Backend Error Traceback: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"AI Service Error: {str(e)}")
+        error_msg = str(e)
+        print(f"Backend Error Traceback: {error_msg}")
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+            raise HTTPException(status_code=429, detail="Gemini API Rate limit exhausted.")
+        raise HTTPException(status_code=400, detail=f"AI Service Error: {error_msg}")
 
 if __name__ == "__main__":
     import uvicorn
