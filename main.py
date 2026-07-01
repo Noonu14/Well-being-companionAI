@@ -94,25 +94,32 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
     try:
+        # Check hardcoded crisis words first
         if contains_crisis_keywords(request.message):
             return {"response": CRISIS_RESPONSE, "crisis_triggered": True}
 
-        # Reconstruct history layout securely
+        # Build structural content using google.genai types
         formatted_contents = []
-        for turn in request.history:
-            # Safely read from standard dictionary keys sent by JS
-            role = "user" if turn.get("sender") == "user" else "model"
-            formatted_contents.append({
-                "role": role,
-                "parts": [turn.get("text", "")]
-            })
         
-        # Add current message context
-        formatted_contents.append({
-            "role": "user",
-            "parts": [request.message]
-        })
+        # 1. Map existing conversation history turns
+        for turn in request.history:
+            role = "user" if turn.get("sender") == "user" else "model"
+            formatted_contents.append(
+                types.Content(
+                    role=role,
+                    parts=[types.Part.from_text(text=turn.get("text", ""))]
+                )
+            )
+        
+        # 2. Append the brand new user message to the end of the history array
+        formatted_contents.append(
+            types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=request.message)]
+            )
+        )
 
+        # 3. Request generation using the structural object chain
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=formatted_contents,
