@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindEase - Well-being Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="info-sidebar">
+            <div class="logo">🌱 MindEase</div>
+            <h1 class="app-title">Your AI Well-being Companion</h1>
+            <p class="tagline">Your safe space for daily reflection and mindfulness guidance.</p>
+            <div class="disclaimer-box">
+                <strong>Disclaimer:</strong> This application is an AI well-being companion designed for emotional reflection using basic CBT principles. It is <strong>not</strong> a replacement for licensed medical therapy or professional crisis care.
+            </div>
+        </aside>
+
+        <main class="chat-container">
+            <header class="chat-header">
+                <h3>Chat Session</h3>
+                <span class="status-indicator">● Active</span>
+            </header>
+            
+            <div class="chat-messages" id="chat-messages">
+                <div class="message assistant-message">
+                    Hello! I'm your well-being companion. How was your day? If anything is weighing on your mind, feel free to share it.
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <input type="text" id="user-input" placeholder="Type a message or share your thoughts..." autocomplete="off">
+                <button id="send-btn">Send</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
