@@ -93,35 +93,37 @@ async def chat_endpoint(request: ChatRequest):
         if contains_crisis_keywords(request.message):
             return {"response": CRISIS_RESPONSE, "crisis_triggered": True}
 
-        # --- RECONSTRUCT HISTORY INTO THE FORMAT THE CLIENT OBJECT EXPECTS ---
+        # Reconstruct history into the format the google-genai SDK expects
         formatted_contents = []
         for turn in request.history:
-            # Map frontend names to Google API spec roles ("user" and "model")
             role = "user" if turn.sender == "user" else "model"
-            formatted_contents.append(
-                types.Content(role=role, parts=[types.Part.from_text(text=turn.text)])
-            )
+            # Use a clean dictionary approach for the SDK contents list structure
+            formatted_contents.append({
+                "role": role,
+                "parts": [turn.text]
+            })
         
-        # Append the current message to the end of the content chain
-        formatted_contents.append(
-            types.Content(role="user", parts=[types.Part.from_text(text=request.message)])
-        )
+        # Append the current active message to the context array
+        formatted_contents.append({
+            "role": "user",
+            "parts": [request.message]
+        })
 
-        # New google-genai SDK text generation syntax with full thread context
+        # Generate content with the clean list structure
         response = client.models.generate_content(
             model='gemini-2.5-flash',
-            contents=formatted_contents, # Send full history + new message here
+            contents=formatted_contents,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 temperature=0.7,
             )
         )
         
-        # Extract the text safely
         return {"response": response.text, "crisis_triggered": False}
 
     except Exception as e:
-        # Catch and pass along explicit error details to the frontend
+        # If an error happens, print it directly to your Render terminal logs for easy debugging
+        print(f"Backend Error Traceback: {str(e)}")
         raise HTTPException(status_code=400, detail=f"AI Service Error: {str(e)}")
 
 if __name__ == "__main__":
