@@ -5,6 +5,9 @@ document.getElementById('user-input').addEventListener('keypress', function(e) {
     }
 });
 
+// --- NEW: Global array to remember the session history ---
+let chatHistory = [];
+
 async function sendMessage() {
     const inputField = document.getElementById('user-input');
     const messageText = inputField.value.trim();
@@ -18,18 +21,27 @@ async function sendMessage() {
     try {
         // 2. Query our FastAPI Python Server
         const response = await fetch('https://well-being-companionai.onrender.com/chat', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ message: messageText })
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            // --- UPDATED: Passing both current message AND the chat history array ---
+            body: JSON.stringify({ 
+                message: messageText,
+                history: chatHistory 
+            })
         });
 
         const data = await response.json();
 
-        // Check if the server returned an error detail message instead
+        // Check if the server returned an error (like a 429 rate limit)
         if (!response.ok) {
-            appendMessage(`Error: ${data.detail || "Something went wrong on the server."}`, 'assistant-message');
+            // --- UPDATED: Graceful, therapeutic handling if Gemini is rate-limited ---
+            if (data.detail && data.detail.includes("429")) {
+                appendMessage("I'm pausing to gather my thoughts. Please wait a short moment before sending your next message! 🤍", 'assistant-message');
+            } else {
+                appendMessage(`Error: ${data.detail || "Something went wrong on the server."}`, 'assistant-message');
+            }
             return;
         }
 
@@ -37,9 +49,12 @@ async function sendMessage() {
         if (data.crisis_triggered) {
             appendMessage(data.response, 'message crisis-message');
         } else {
-            // Safe fallback if data.response isn't an exact match
             const finalReply = data.response || "I heard you, but my response text format was blank.";
             appendMessage(finalReply, 'assistant-message');
+
+            // --- NEW: Update our tracking array with both turns if successful ---
+            chatHistory.push({ sender: 'user', text: messageText });
+            chatHistory.push({ sender: 'assistant', text: finalReply });
         }
 
     } catch (error) {

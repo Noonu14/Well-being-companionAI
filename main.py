@@ -30,12 +30,22 @@ if not api_key_val:
 # Initialize Google GenAI Client with the verified key string
 client = genai.Client()
 
-# Define request structure
+# --- UPDATED REQUEST STRUCTURE TO INCLUDE HISTORY ---
+class ChatMessage(BaseModel):
+    sender: str  # "user" or "assistant"
+    text: str
+
 class ChatRequest(BaseModel):
     message: str
+    history: list[ChatMessage] = [] # Accepts the running history array from frontend
 
 # 1. HARDCODED SAFETY PROTOCOL
-CRISIS_KEYWORDS = [r"suicide", r"kill myself", r"self-harm", r"end my life", r"cut myself",r"going through depression",r"in depression",r"want to die",r"want to end my life",r"want to kill myself",r"want to commit self-harm",r"want to commit a crime",r"want to murder",r"want to hurt"]
+CRISIS_KEYWORDS = [
+    r"suicide", r"kill myself", r"self-harm", r"end my life", r"cut myself",
+    r"going through depression", r"in depression", r"want to die", 
+    r"want to end my life", r"want to kill myself", r"want to commit self-harm",
+    r"want to commit a crime", r"want to murder", r"want to hurt"
+]
 
 def contains_crisis_keywords(text: str) -> bool:
     for pattern in CRISIS_KEYWORDS:
@@ -83,10 +93,24 @@ async def chat_endpoint(request: ChatRequest):
         if contains_crisis_keywords(request.message):
             return {"response": CRISIS_RESPONSE, "crisis_triggered": True}
 
-        # New google-genai SDK text generation syntax
+        # --- RECONSTRUCT HISTORY INTO THE FORMAT THE CLIENT OBJECT EXPECTS ---
+        formatted_contents = []
+        for turn in request.history:
+            # Map frontend names to Google API spec roles ("user" and "model")
+            role = "user" if turn.sender == "user" else "model"
+            formatted_contents.append(
+                types.Content(role=role, parts=[types.Part.from_text(text=turn.text)])
+            )
+        
+        # Append the current message to the end of the content chain
+        formatted_contents.append(
+            types.Content(role="user", parts=[types.Part.from_text(text=request.message)])
+        )
+
+        # New google-genai SDK text generation syntax with full thread context
         response = client.models.generate_content(
             model='gemini-2.5-flash',
-            contents=request.message,
+            contents=formatted_contents, # Send full history + new message here
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 temperature=0.7,
@@ -102,7 +126,6 @@ async def chat_endpoint(request: ChatRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    import os
     # Access the dynamic PORT assigned by the hosting provider, fallback to 8001
     port = int(os.environ.get("PORT", 8001))
     uvicorn.run("main:app", host="0.0.0.0", port=port)
