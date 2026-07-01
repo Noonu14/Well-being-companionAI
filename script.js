@@ -17,12 +17,12 @@ async function sendMessage() {
 
     try {
         // 2. Query our FastAPI Python Server
-        const response = await fetch('http://127.0.0.1:8001/chat', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ message: messageText })
+        const response = await fetch('https://well-being-companionai.onrender.com/chat', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: messageText })
         });
 
         const data = await response.json();
