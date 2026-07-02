@@ -5,7 +5,6 @@ document.getElementById('user-input').addEventListener('keypress', function(e) {
     }
 });
 
-// --- NEW: Global array to remember the session history ---
 let chatHistory = [];
 
 async function sendMessage() {
@@ -14,18 +13,17 @@ async function sendMessage() {
     
     if (!messageText) return;
 
-    // 1. Append User Message visually
     appendMessage(messageText, 'user-message');
     inputField.value = '';
 
     try {
-        // 2. Query our FastAPI Python Server
+
         const response = await fetch('https://well-being-companionai.onrender.com/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            // --- UPDATED: Passing both current message AND the chat history array ---
+
             body: JSON.stringify({ 
                 message: messageText,
                 history: chatHistory 
@@ -34,8 +32,6 @@ async function sendMessage() {
 
         const data = await response.json();
 
-        // Check if the server returned an error (like a 429 rate limit)
-        // Check if the server returned an error code
         if (!response.ok) {
             if (response.status === 429) {
                 appendMessage("I'm pausing to gather my thoughts. Please wait a short moment before sending your next message! 🤍", 'assistant-message');
@@ -45,14 +41,12 @@ async function sendMessage() {
             return;
         }
 
-        // 3. Handle a proper response or fall back gracefully
         if (data.crisis_triggered) {
             appendMessage(data.response, 'message crisis-message');
         } else {
             const finalReply = data.response || "I heard you, but my response text format was blank.";
             appendMessage(finalReply, 'assistant-message');
 
-            // --- NEW: Update our tracking array with both turns if successful ---
             chatHistory.push({ sender: 'user', text: messageText });
             chatHistory.push({ sender: 'assistant', text: finalReply });
         }
@@ -70,6 +64,5 @@ function appendMessage(text, className) {
     messageDiv.innerText = text;
     
     chatMessages.appendChild(messageDiv);
-    // Auto-scroll panel to the bottom
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
