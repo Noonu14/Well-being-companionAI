@@ -7,39 +7,32 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-# Load environment variables
 load_dotenv()
 
-# Initialize FastAPI app
 app = FastAPI(title="Well-being Companion AI")
 
-# Enable CORS so your frontend can communicate with the backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, replace with your frontend URL
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Verify API key exists before starting
 api_key_val = os.getenv("GEMINI_API_KEY")
 if not api_key_val:
     raise ValueError("CRITICAL: GEMINI_API_KEY is missing from your .env file!")
 
-# Initialize Google GenAI Client with the verified key string
 client = genai.Client()
 
-# --- UPDATED REQUEST STRUCTURE TO INCLUDE HISTORY ---
 class ChatMessage(BaseModel):
-    sender: str  # "user" or "assistant"
+    sender: str 
     text: str
 
 class ChatRequest(BaseModel):
     message: str
-    history: list[ChatMessage] = [] # Accepts the running history array from frontend
+    history: list[ChatMessage] = [] 
 
-# 1. HARDCODED SAFETY PROTOCOL
 CRISIS_KEYWORDS = [
     r"suicide", r"kill myself", r"self-harm", r"end my life", r"cut myself",
     r"going through depression", r"in depression", r"want to die", 
@@ -85,22 +78,18 @@ SYSTEM_INSTRUCTION = (
     "4. CONTINUOUS ENGAGEMENT: Conclude with a single, highly manageable question or microscopic step to keep the dialogue flowing and help them step forward safely."
 )
 
-# Simplify the request schema to accept a list of dicts directly
 class ChatRequest(BaseModel):
     message: str
-    history: list = []  # Changed from list[ChatMessage] to a standard list
+    history: list = []  
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
     try:
-        # Check hardcoded crisis words first
         if contains_crisis_keywords(request.message):
             return {"response": CRISIS_RESPONSE, "crisis_triggered": True}
 
-        # Build structural content using google.genai types
         formatted_contents = []
-        
-        # 1. Map existing conversation history turns
+
         for turn in request.history:
             role = "user" if turn.get("sender") == "user" else "model"
             formatted_contents.append(
@@ -109,8 +98,7 @@ async def chat_endpoint(request: ChatRequest):
                     parts=[types.Part.from_text(text=turn.get("text", ""))]
                 )
             )
-        
-        # 2. Append the brand new user message to the end of the history array
+
         formatted_contents.append(
             types.Content(
                 role="user",
@@ -118,7 +106,6 @@ async def chat_endpoint(request: ChatRequest):
             )
         )
 
-        # 3. Request generation using the structural object chain
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=formatted_contents,
@@ -139,6 +126,5 @@ async def chat_endpoint(request: ChatRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    # Access the dynamic PORT assigned by the hosting provider, fallback to 8001
     port = int(os.environ.get("PORT", 8001))
     uvicorn.run("main:app", host="0.0.0.0", port=port)
