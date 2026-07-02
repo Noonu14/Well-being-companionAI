@@ -40,7 +40,6 @@ body {
     overflow: hidden;
 }
 
-/* Sidebar Layout */
 .info-sidebar {
     width: 30%;
     background-color: #2b3a42;
@@ -71,7 +70,6 @@ body {
     border-left: 4px solid #ffb74d;
 }
 
-/* Chat Layout Area */
 .chat-container {
     width: 70%;
     display: flex;
@@ -125,7 +123,6 @@ body {
     border-bottom-right-radius: 2px;
 }
 
-/* Crisis Styling Intercept */
 .crisis-message {
     background-color: #ffebee;
     color: #c62828;
@@ -134,7 +131,6 @@ body {
     max-width: 90%;
 }
 
-/* Chat Input Bar */
 .chat-input-area {
     padding: 20px 30px;
     border-top: 1px solid var(--border-color);
